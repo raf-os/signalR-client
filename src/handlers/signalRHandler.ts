@@ -1,30 +1,40 @@
 import * as signalR from "@microsoft/signalr";
 import EventBus from "@/classes/EventBus";
+import type { ChatMessageProps } from "@/components/chat/ChatMessage";
 
 type SignalRHandlerEvents = {
-    "onMessageReceived": { username: string, message: string }
+    "onMessageReceived": ChatMessageProps
 }
 
 export default class SignalRHandler {
-    connection: signalR.HubConnection;
+    connection?: signalR.HubConnection;
     observable: EventBus<SignalRHandlerEvents>;
     
     constructor() {
-        this.connection = new signalR.HubConnectionBuilder().withUrl("http://localhost:5062/hub").build();
-        this.observable = new EventBus<SignalRHandlerEvents>;
-
-        this.connection.on("messageReceived", (username: string, message: string) => {
-            this.observable.emit('onMessageReceived', { username, message });
-        });
-
-        this.connection.start().catch((err) => console.log(err));
+        this.observable = new EventBus<SignalRHandlerEvents>();
     }
 
-    sendMessage(content: string) {
-        if (content.trim().length === 0) return;
-        this.connection.send("newMessage", "user", content)
-            .then(() => {
-                this.observable.emit('onMessageReceived', { username: "user", message: content });
-            });
+    async attemptConnection() {
+        this.connection = new signalR.HubConnectionBuilder().withUrl("http://localhost:5062/hub").build();
+        this.connection.on("messageReceived", (username: string, message: string, type: "user" | "system") => {
+            this.observable.emit('onMessageReceived', { sender: username, body: message, type: type });
+        });
+        this.connection.start().then(() => this.reportSystemMessage('Connected to server.'), () => this.reportSystemMessage("Error connecting to server."));
+    }
+
+    reportSystemMessage(message: any) {
+        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system"});
+    }
+
+    async sendMessage(user:string, body: string): Promise<boolean> {
+        if (!this.connection) { console.log("No connection"); return false; }
+        if (body.trim().length === 0) { return false; }
+        await this.connection.send("newMessage", "user", body);
+        this.observable.emit('onMessageReceived', { sender: user, body: body, type: "user" });
+        return true;
+    }
+
+    disconnect() {
+        this.connection?.stop();
     }
 }

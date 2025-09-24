@@ -1,6 +1,9 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useTransition, useContext, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import SignalRHandler from "@/handlers/signalRHandler";
+import AppContext, { type TAppContext } from "@/lib/AppContext";
+
+import { ChatBox, ChatInput } from "@/components/chat";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,17 +11,44 @@ import { Label } from "@/components/ui/label";
 
 export default function App() {
 	const [ isLoggedIn, setIsLoggedIn ] = useState<boolean>(false);
-	const signalHandler = useRef<SignalRHandler | null>(null);
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
+	const [ isPending, startTransition ] = useTransition();
+	const signalHandler = useRef<SignalRHandler | undefined>(undefined);
 
-	const executeLogin = (username: string) => {
-		signalHandler.current = new SignalRHandler();
+	const executeLogin = useCallback((username: string) => {
+		if (!signalHandler.current) return false;
+		signalHandler.current.attemptConnection();
 		setUsername(username);
 		setIsLoggedIn(true);
+		return true;
+	}, [signalHandler, userName]);
+
+	const sendMessage = useCallback((message: string, callback?: () => void) => {
+		if (!signalHandler.current) return;
+		if (!signalHandler) { console.log("No signal handler"); return; }
+		if (!userName) { console.log("No username"); return; }
+
+		startTransition(async () => {
+			await signalHandler.current?.sendMessage(userName, message);
+			callback?.();
+		});
+	}, [signalHandler, userName]);
+
+	useEffect(() => {
+		signalHandler.current = new SignalRHandler();
+
+		return () => signalHandler.current?.disconnect();
+	}, []);
+
+	const ctx: TAppContext = {
+		attemptLogin: executeLogin,
+		sendMessage: sendMessage,
+		signalHandler: signalHandler.current,
+		isActionPending: isPending
 	}
 
 	return (
-		<>
+		<AppContext.Provider value={ctx}>
 			<div
 				className="relative flex flex-col gap-4 w-full min-h-lvh md:w-3/4 mx-auto py-8"
 			>
@@ -43,20 +73,21 @@ export default function App() {
 				<ChatInput />
 
 				{ !isLoggedIn && createPortal(
-					(<LoginBox loginFn={executeLogin} />),
+					(<LoginBox />),
 					document.body
 				) }
 			</div>
-		</>
+		</AppContext.Provider>
 	)
 }
 
-function LoginBox({ loginFn }: { loginFn: (username: string) => void }) {
+function LoginBox() {
 	const inputRef = useRef<HTMLInputElement>(null);
+	const { attemptLogin } = useContext(AppContext);
 
 	const handleLogin = () => {
 		if (inputRef.current === null) return;
-		loginFn(inputRef.current.value);
+		attemptLogin(inputRef.current.value);
 	}
 
 	return (
@@ -80,78 +111,6 @@ function LoginBox({ loginFn }: { loginFn: (username: string) => void }) {
 					Log In
 				</Button>
 			</div>
-		</div>
-	)
-}
-
-function ChatBox({
-	signalHandler
-}: {
-	signalHandler?: SignalRHandler
-}) {
-	const [ chatMessages, setChatMessages ] = useState<ChatMessageProps[]>([]);
-
-	useEffect(() => {
-		if (signalHandler===undefined) return;
-
-		const handleMessageReceive = ({ username, message }: { username: string, message: string }) => {
-			setChatMessages(prevMessages => [...prevMessages, { sender: username, body: message }]);
-		}
-
-		signalHandler.observable.on('onMessageReceived', handleMessageReceive);
-
-		return signalHandler.observable.off('onMessageReceived', handleMessageReceive);
-	}, [signalHandler]);
-
-	return (
-		<div
-			className="flex flex-col border px-3 py-2 rounded-lg grow-1 shrink-1 h-full overflow-y-scroll overflow-x-hidden"
-		>
-			{ chatMessages.length === 0 ? (
-				<div>
-					No chat messages to show.
-				</div>
-			): (
-				<>
-					{chatMessages.map((message, idx) => <ChatMessage body={message.body} sender={message.sender} key={`message-${idx}`} />)}
-				</>
-			) }
-		</div>
-	)
-}
-
-type ChatMessageProps = {
-	body: string,
-	sender: string,
-	type?: string
-}
-
-function ChatMessage({
-	body,
-	sender,
-	type="user"
-}: ChatMessageProps) {
-	return (
-		<div className="flex flex-col">
-			<div className="text-sm font-semibold leading-4">
-				{ sender }
-			</div>
-			<div>
-				{ body }
-			</div>
-		</div>
-	)
-}
-
-function ChatInput() {
-	return (
-		<div
-			className="flex w-full gap-4"
-		>
-			<Input className="grow-1 shrink-1" />
-			<Button className="grow-0 shrink-0">
-				submit
-			</Button>
 		</div>
 	)
 }
