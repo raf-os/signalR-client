@@ -37,7 +37,10 @@ export default function App() {
 	useEffect(() => {
 		signalHandler.current = new SignalRHandler();
 
-		return () => signalHandler.current?.disconnect();
+		return () => {
+			signalHandler.current?.disconnect();
+			signalHandler.current = undefined;
+		}
 	}, []);
 
 	const ctx: TAppContext = {

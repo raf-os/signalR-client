@@ -2,6 +2,7 @@ import * as signalR from "@microsoft/signalr";
 import EventBus from "@/classes/EventBus";
 import type { ChatMessageProps } from "@/components/chat/ChatMessage";
 
+
 type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps
 }
@@ -15,7 +16,8 @@ export default class SignalRHandler {
     }
 
     async attemptConnection() {
-        this.connection = new signalR.HubConnectionBuilder().withUrl("http://localhost:5062/hub").build();
+        const urlEndpoint = "http://localhost:5062/hub";
+        this.connection = new signalR.HubConnectionBuilder().withUrl(urlEndpoint).build();
         this.connection.on("messageReceived", (username: string, message: string, type: "user" | "system") => {
             this.observable.emit('onMessageReceived', { sender: username, body: message, type: type });
         });
