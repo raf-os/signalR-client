@@ -6,7 +6,9 @@ import { Button } from "@/components/ui/button";
 
 export default function ChatInput() {
 	const inputRef = useRef<HTMLInputElement>(null);
-	const { sendMessage, isActionPending } = useContext(AppContext);
+	const { sendMessage, isActionPending, username } = useContext(AppContext);
+
+	const isLoggedIn = username !== undefined;
 
 	const handleSubmit = () => {
 		if (!inputRef.current) return;
@@ -33,12 +35,14 @@ export default function ChatInput() {
 				className="grow-1 shrink-1"
 				ref={inputRef}
                 onKeyUp={handleKeyUp}
+				disabled={username===undefined}
+				placeholder={!isLoggedIn? "Please log in to chat" : undefined}
 			/>
 
 			<Button
 				className="grow-0 shrink-0"
 				onClick={handleSubmit}
-				disabled={isActionPending}
+				disabled={isActionPending || !isLoggedIn}
 			>
 				SUBMIT
 			</Button>

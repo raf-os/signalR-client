@@ -1,5 +1,4 @@
 import { useState, useRef, useTransition, useContext, useEffect, useCallback } from "react";
-import { createPortal } from "react-dom";
 import SignalRHandler from "@/handlers/signalRHandler";
 import AppContext, { type TAppContext } from "@/lib/AppContext";
 
@@ -8,20 +7,28 @@ import { ChatBox, ChatInput } from "@/components/chat";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function App() {
-	const [ isLoggedIn, setIsLoggedIn ] = useState<boolean>(false);
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
+	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
 	const [ isPending, startTransition ] = useTransition();
+	const [ showLoginDialog, setShowLoginDialog ] = useState<boolean>(false);
 	const signalHandler = useRef<SignalRHandler | undefined>(undefined);
 
 	const executeLogin = useCallback((username: string) => {
 		if (!signalHandler.current) return false;
-		signalHandler.current.attemptConnection();
-		setUsername(username);
-		setIsLoggedIn(true);
+		if (isLoginPending) return false;
+		signalHandler.current.attemptLogin(username);
+		setIsLoginPending(true);
 		return true;
 	}, [signalHandler, userName]);
+
+	const onSuccessfulLogin = ({username}: {username: string}) => {
+		setIsLoginPending(false);
+		setShowLoginDialog(false);
+		setUsername(username);
+	}
 
 	const sendMessage = useCallback((message: string, callback?: () => void) => {
 		if (!signalHandler.current) return;
@@ -35,10 +42,14 @@ export default function App() {
 	}, [signalHandler, userName]);
 
 	useEffect(() => {
-		signalHandler.current = new SignalRHandler();
-
+		const sigH = new SignalRHandler();
+		sigH.observable.on("onSuccessfulLogin", onSuccessfulLogin);
+		signalHandler.current = sigH;
+		setTimeout(() => sigH.attemptConnection(), 50);
+		
 		return () => {
-			signalHandler.current?.disconnect();
+			sigH.observable.off("onSuccessfulLogin", onSuccessfulLogin);
+			sigH.disconnect();
 			signalHandler.current = undefined;
 		}
 	}, []);
@@ -47,7 +58,8 @@ export default function App() {
 		attemptLogin: executeLogin,
 		sendMessage: sendMessage,
 		signalHandler: signalHandler.current,
-		isActionPending: isPending
+		isActionPending: isPending,
+		username: userName
 	}
 
 	return (
@@ -61,13 +73,18 @@ export default function App() {
 					Vite test live chat app
 				</h1>
 
-				<div className="text-sm">
-					{ isLoggedIn ? (
-						<div>
+				<div className="flex items-center gap-2 text-sm">
+					{ (userName) ? (
+						<p>
 							Logged in as: <span className="font-bold">{userName}</span>
-						</div>
+						</p>
 					): (
-						<p>Not logged in.</p>
+						<>
+							<p>Not logged in.</p>
+							<Button size="sm" onClick={() => setShowLoginDialog(true)} disabled={isLoginPending}>
+								Try to log in bruv
+							</Button>
+						</>
 					)}
 				</div>
 
@@ -75,16 +92,13 @@ export default function App() {
 
 				<ChatInput />
 
-				{ !isLoggedIn && createPortal(
-					(<LoginBox />),
-					document.body
-				) }
+				<LoginBox isOpen={showLoginDialog} setIsOpen={setShowLoginDialog} isLoginPending={isLoginPending} />
 			</div>
 		</AppContext.Provider>
 	)
 }
 
-function LoginBox() {
+function LoginBox({ isOpen, setIsOpen, isLoginPending }: { isOpen: boolean, setIsOpen: (o: boolean) => void, isLoginPending: boolean }) {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { attemptLogin } = useContext(AppContext);
 
@@ -94,26 +108,27 @@ function LoginBox() {
 	}
 
 	return (
-		<div
-			className="flex items-center justify-center absolute z-10 top-0 left-0 w-full h-full bg-black/25"
-		>
-			<div
-				className="flex flex-col gap-4 rounded-lg shadow-lg bg-neutral-50 border border-neutral-300 w-[600px] p-4"
-			>
-				<p>You must login, dude</p>
-				
+		<Dialog open={isOpen} onOpenChange={setIsOpen}>
+			<DialogContent showCloseButton={false}>
+				<DialogHeader>
+					<DialogTitle>Log In</DialogTitle>
+				</DialogHeader>
+
 				<div className="flex flex-col gap-1">
 					<Label>Username</Label>
-					<Input ref={inputRef} />
+					<Input ref={inputRef} disabled={isLoginPending} />
 				</div>
 
-				<Button
-					type="button"
-					onClick={handleLogin}
-				>
-					Log In
-				</Button>
-			</div>
-		</div>
+				<DialogFooter>
+					<Button
+						type="button"
+						onClick={handleLogin}
+						disabled={isLoginPending}
+					>
+						Log In
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	)
 }

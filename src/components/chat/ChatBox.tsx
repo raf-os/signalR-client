@@ -13,6 +13,9 @@ export default function ChatBox() {
 			setChatMessages(prevMessages => [...prevMessages, { type: type, sender: sender, body: body }]);
 		}
 
+		const cachedEvent = signalHandler.observable.getCachedEvent("onMessageReceived", true);
+		if (cachedEvent) handleMessageReceive(cachedEvent);
+
 		signalHandler.observable.on('onMessageReceived', handleMessageReceive);
 
 		return () => {
@@ -26,7 +29,7 @@ export default function ChatBox() {
 		>
 			{ chatMessages.length === 0 ? (
 				<div>
-					No chat messages to show.
+					Attempting connection...
 				</div>
 			): (
 				<>

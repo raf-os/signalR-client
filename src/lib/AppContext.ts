@@ -1,11 +1,12 @@
 import { createContext } from "react";
-import type SignalRHandler from "@/handlers/signalRHandler";
+import SignalRHandler from "@/handlers/signalRHandler";
 
 export type TAppContext = {
     attemptLogin: (username: string) => boolean,
     sendMessage: (message: string, callback?: () => void) => void,
     signalHandler: SignalRHandler | undefined,
     isActionPending: boolean,
+    username?: string,
 }
 
 export const DefaultAppContext: TAppContext = {

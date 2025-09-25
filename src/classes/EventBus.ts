@@ -4,6 +4,9 @@ export default class EventBus<Events extends Record<string, any>> {
     private listeners: {
         [K in keyof Events]?: Set<EventHandler<Events[K]>>
     } = {};
+    public eventCache: {
+        [K in keyof Events]?: Events[K]
+    } = {};
 
     on<K extends keyof Events>(eventName: K | K[], callback: EventHandler<Events[K]>): void {
         const eventNames = Array.isArray(eventName) ? eventName : [eventName];
@@ -24,5 +27,12 @@ export default class EventBus<Events extends Record<string, any>> {
 
     emit<K extends keyof Events>(eventName: K, payload: Events[K]): void {
         this.listeners[eventName]?.forEach(handler => handler(payload));
+        this.eventCache[eventName] = payload;
+    }
+
+    getCachedEvent<K extends keyof Events>(eventName: K, clear: boolean = false) {
+        const cache = this.eventCache[eventName];
+        if (clear) delete this.eventCache[eventName];
+        return cache;
     }
 }
