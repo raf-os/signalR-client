@@ -2,6 +2,8 @@ import ChatMessage, { type ChatMessageProps } from "./ChatMessage";
 import AppContext from "@/lib/AppContext";
 import { useState, useEffect, useContext } from "react";
 
+import { ScrollArea } from "../ui/scroll-area";
+
 export default function ChatBox() {
 	const [ chatMessages, setChatMessages ] = useState<ChatMessageProps[]>([]);
     const { signalHandler } = useContext(AppContext);
@@ -9,8 +11,8 @@ export default function ChatBox() {
 	useEffect(() => {
 		if (!signalHandler) return;
 
-		const handleMessageReceive = ({ sender, body, type }: ChatMessageProps) => {
-			setChatMessages(prevMessages => [...prevMessages, { type: type, sender: sender, body: body }]);
+		const handleMessageReceive = (props: ChatMessageProps) => {
+			setChatMessages(prevMessages => [...prevMessages, props]);
 		}
 
 		const cachedEvent = signalHandler.observable.getCachedEvent("onMessageReceived", true);
@@ -24,8 +26,8 @@ export default function ChatBox() {
 	}, [signalHandler]);
 
 	return (
-		<div
-			className="flex flex-col gap-2 border px-3 py-2 rounded-lg grow-1 shrink-1 h-full overflow-y-scroll overflow-x-hidden"
+		<ScrollArea
+			className="flex flex-col gap-2 border p-3 rounded-lg grow-1 shrink-1 h-full"
 		>
 			{ chatMessages.length === 0 ? (
 				<div>
@@ -33,9 +35,9 @@ export default function ChatBox() {
 				</div>
 			): (
 				<>
-					{chatMessages.map((message, idx) => <ChatMessage type={message.type} body={message.body} sender={message.sender} key={`message-${idx}`} />)}
+					{chatMessages.map((message, idx) => <ChatMessage key={`message-${idx}`} {...message} />)}
 				</>
 			) }
-		</div>
+		</ScrollArea>
 	)
 }

@@ -1,14 +1,15 @@
-import { useRef, useContext } from "react";
+import { useRef, useContext, useCallback } from "react";
 import AppContext from "@/lib/AppContext";
+import useLoginStatus from "@/hooks/useLoginStatus";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
 export default function ChatInput() {
 	const inputRef = useRef<HTMLInputElement>(null);
-	const { sendMessage, isActionPending, username } = useContext(AppContext);
+	const { sendMessage, isActionPending } = useContext(AppContext);
 
-	const isLoggedIn = username !== undefined;
+	const isLoggedIn = useLoginStatus();
 
 	const handleSubmit = () => {
 		if (!inputRef.current) return;
@@ -17,7 +18,14 @@ export default function ChatInput() {
 		if (val.trim().length === 0) return;
 
         inputRef.current.value = "";
-		sendMessage(val);
+		sendMessage(val, (success) => {
+			if (success) {
+				if (inputRef.current) {
+					inputRef.current.value = "";
+					inputRef.current.focus();
+				}
+			}
+		});
 	}
 
 	const handleKeyUp = (ev: React.KeyboardEvent<HTMLInputElement>) => {
@@ -35,7 +43,7 @@ export default function ChatInput() {
 				className="grow-1 shrink-1"
 				ref={inputRef}
                 onKeyUp={handleKeyUp}
-				disabled={username===undefined}
+				disabled={!isLoggedIn}
 				placeholder={!isLoggedIn? "Please log in to chat" : undefined}
 			/>
 

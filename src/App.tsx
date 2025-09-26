@@ -14,50 +14,49 @@ export default function App() {
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
 	const [ isPending, startTransition ] = useTransition();
 	const [ showLoginDialog, setShowLoginDialog ] = useState<boolean>(false);
-	const signalHandler = useRef<SignalRHandler | undefined>(undefined);
+	const [ signalHandler, setSignalHandler ] = useState<SignalRHandler | undefined>(undefined);
 
 	const executeLogin = useCallback((username: string) => {
-		if (!signalHandler.current) return false;
+		if (!signalHandler) return false;
 		if (isLoginPending) return false;
-		signalHandler.current.attemptLogin(username);
+		signalHandler.attemptLogin(username);
 		setIsLoginPending(true);
 		return true;
 	}, [signalHandler, userName]);
 
-	const onSuccessfulLogin = ({username}: {username: string}) => {
+	const onSuccessfulLogin = useCallback(({username}: {username: string}) => {
 		setIsLoginPending(false);
 		setShowLoginDialog(false);
 		setUsername(username);
-	}
+	}, []);
 
-	const sendMessage = useCallback((message: string, callback?: () => void) => {
-		if (!signalHandler.current) return;
-		if (!signalHandler) { console.log("No signal handler"); return; }
-		if (!userName) { console.log("No username"); return; }
+	const sendMessage = useCallback((message: string, callback?: (success: boolean) => void) => {
+		if (!signalHandler) { return; }
+		if (!userName) { return; }
 
 		startTransition(async () => {
-			await signalHandler.current?.sendMessage(userName, message);
-			callback?.();
+			const success = await signalHandler.sendMessage(userName, message);
+			callback?.(success);
 		});
 	}, [signalHandler, userName]);
 
 	useEffect(() => {
 		const sigH = new SignalRHandler();
 		sigH.observable.on("onSuccessfulLogin", onSuccessfulLogin);
-		signalHandler.current = sigH;
-		setTimeout(() => sigH.attemptConnection(), 50);
+		setSignalHandler(sigH);
+		sigH.attemptConnection();
 		
 		return () => {
 			sigH.observable.off("onSuccessfulLogin", onSuccessfulLogin);
 			sigH.disconnect();
-			signalHandler.current = undefined;
+			setSignalHandler(undefined);
 		}
 	}, []);
 
 	const ctx: TAppContext = {
 		attemptLogin: executeLogin,
 		sendMessage: sendMessage,
-		signalHandler: signalHandler.current,
+		signalHandler: signalHandler,
 		isActionPending: isPending,
 		username: userName
 	}
@@ -73,28 +72,55 @@ export default function App() {
 					Vite test live chat app
 				</h1>
 
-				<div className="flex items-center gap-2 text-sm">
-					{ (userName) ? (
-						<p>
-							Logged in as: <span className="font-bold">{userName}</span>
-						</p>
-					): (
-						<>
-							<p>Not logged in.</p>
-							<Button size="sm" onClick={() => setShowLoginDialog(true)} disabled={isLoginPending}>
-								Try to log in bruv
-							</Button>
-						</>
-					)}
-				</div>
+				<LoginStatusComponent onClick={() => setShowLoginDialog(true)} isLoginPending={isLoginPending} />
 
 				<ChatBox />
 
 				<ChatInput />
 
-				<LoginBox isOpen={showLoginDialog} setIsOpen={setShowLoginDialog} isLoginPending={isLoginPending} />
+				<LoginBox
+					isOpen={showLoginDialog}
+					setIsOpen={setShowLoginDialog}
+					isLoginPending={isLoginPending}
+				/>
 			</div>
 		</AppContext.Provider>
+	)
+}
+
+function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void, isLoginPending: boolean }) {
+	const { username, signalHandler } = useContext(AppContext);
+
+	const isLoggedIn = username !== undefined;
+	const isConnected = signalHandler?.isConnected() || false;
+
+	return (
+		<div className="flex items-center gap-2 text-sm">
+			{ isConnected
+				? (
+					isLoggedIn
+						? (
+							<p>
+								Logged in as: <strong>{ username }</strong>
+							</p>
+						): (
+							<>
+								<p>You're not logged in.</p>
+								<Button
+									onClick={onClick}
+									size="sm"
+									disabled={isLoginPending}
+								>
+									Log In
+								</Button>
+							</>
+						)
+				): (
+					<p>
+						No server connection.
+					</p>
+				)}
+		</div>
 	)
 }
 

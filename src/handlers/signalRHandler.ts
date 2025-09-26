@@ -2,10 +2,12 @@ import * as signalR from "@microsoft/signalr";
 import EventBus from "@/classes/EventBus";
 import type { ChatMessageProps } from "@/components/chat/ChatMessage";
 
+const urlEndpoint = "http://localhost:5062/hub";
 
 type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
-    "onSuccessfulLogin": { username: string }
+    "onSuccessfulLogin": { username: string },
+    "onConnectionClose": {},
 }
 
 export default class SignalRHandler {
@@ -17,11 +19,24 @@ export default class SignalRHandler {
     }
 
     async attemptConnection() {
-        if (this.connection?.state === signalR.HubConnectionState.Connected || this.connection?.state === signalR.HubConnectionState.Connecting) return;
-        const urlEndpoint = "http://localhost:5062/hub";
-        this.connection = new signalR.HubConnectionBuilder().withUrl(urlEndpoint).build();
+        if (
+            this.connection?.state === signalR.HubConnectionState.Connected
+            || this.connection?.state === signalR.HubConnectionState.Connecting
+            || this.connection?.state === signalR.HubConnectionState.Reconnecting
+        ) return;
+        
+        this.connection = new signalR.HubConnectionBuilder()
+            .withUrl(urlEndpoint)
+            //.withAutomaticReconnect()
+            .build();
         this.setupCallbacks();
-        this.connection.start().then(() => this.reportSystemMessage('Connected to server.'), () => this.reportSystemMessage("Error connecting to server."));
+
+        const success = await this.connection.start()
+            .then(
+                () => { this.reportSystemMessage('Connected to server.', "success"); return true; },
+                () => { this.reportSystemMessage("Error connecting to server.", "error"); return false; }
+            );
+        return success;
     }
 
     private setupCallbacks() {
@@ -32,6 +47,11 @@ export default class SignalRHandler {
         this.connection?.on("Register", (username: string) => {
             this.observable.emit('onSuccessfulLogin', { username: username });
         });
+
+        this.connection?.onclose(() => {
+            this.reportSystemMessage("Connection closed.");
+            this.observable.emit('onConnectionClose', {});
+        });
     }
 
     async attemptLogin(username: string) {
@@ -40,8 +60,9 @@ export default class SignalRHandler {
         this.connection.invoke("Register", username).catch(() => this.reportSystemMessage('Unknown error logging in.'));
     }
 
-    reportSystemMessage(message: any) {
-        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system"});
+    reportSystemMessage(message: any, type?: string) {
+        const metadata = (type) ? { type: type } : undefined;
+        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system", metadata});
     }
 
     async sendMessage(user:string, body: string): Promise<boolean> {
@@ -49,6 +70,13 @@ export default class SignalRHandler {
         if (body.trim().length === 0) { return false; }
         await this.connection.send("NewMessage", "user", body);
         this.observable.emit('onMessageReceived', { sender: user, body: body, type: "user" });
+        return true;
+    }
+
+    isConnected(): boolean {
+        if (!this.connection) return false;
+        if (this.connection.state !== signalR.HubConnectionState.Connected) return false;
+
         return true;
     }
 
