@@ -12,9 +12,10 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 export default function App() {
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
-	const [ isPending, startTransition ] = useTransition();
+	const [ isActionPending, startTransition ] = useTransition();
 	const [ showLoginDialog, setShowLoginDialog ] = useState<boolean>(false);
 	const [ signalHandler, setSignalHandler ] = useState<SignalRHandler | undefined>(undefined);
+	const [ isConnected, setIsConnected ] = useState<boolean>(false);
 
 	const executeLogin = useCallback((username: string) => {
 		if (!signalHandler) return false;
@@ -38,16 +39,32 @@ export default function App() {
 			const success = await signalHandler.sendMessage(userName, message);
 			callback?.(success);
 		});
-	}, [signalHandler, userName]);
+	}, [userName, signalHandler]);
 
 	useEffect(() => {
+		const onConnectionOpen = () => {
+			setIsConnected(true);
+		}
+
+		const onConnectionClose = () => {
+			setIsConnected(false);
+		}
+
 		const sigH = new SignalRHandler();
 		sigH.observable.on("onSuccessfulLogin", onSuccessfulLogin);
+		sigH.observable.on("onConnectionClose", onConnectionClose);
 		setSignalHandler(sigH);
-		sigH.attemptConnection();
+		const _t = setTimeout(async () => {
+			const success = await sigH.attemptConnection();
+			if (success) {
+				onConnectionOpen();
+			}
+		}, 50);
 		
 		return () => {
+			clearTimeout(_t);
 			sigH.observable.off("onSuccessfulLogin", onSuccessfulLogin);
+			sigH.observable.off("onConnectionClose", onConnectionClose);
 			sigH.disconnect();
 			setSignalHandler(undefined);
 		}
@@ -57,7 +74,8 @@ export default function App() {
 		attemptLogin: executeLogin,
 		sendMessage: sendMessage,
 		signalHandler: signalHandler,
-		isActionPending: isPending,
+		isActionPending: isActionPending,
+		isConnected: isConnected,
 		username: userName
 	}
 
@@ -69,7 +87,7 @@ export default function App() {
 				<h1
 					className="text-xl font-bold text-center grow-0 shrink-0"
 				>
-					Vite test live chat app
+					React live chat app
 				</h1>
 
 				<LoginStatusComponent onClick={() => setShowLoginDialog(true)} isLoginPending={isLoginPending} />
@@ -89,13 +107,12 @@ export default function App() {
 }
 
 function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void, isLoginPending: boolean }) {
-	const { username, signalHandler } = useContext(AppContext);
+	const { username, isConnected } = useContext(AppContext);
 
 	const isLoggedIn = username !== undefined;
-	const isConnected = signalHandler?.isConnected() || false;
 
 	return (
-		<div className="flex items-center gap-2 text-sm">
+		<div className="flex items-center gap-2 text-sm border shadow-sm rounded-lg h-12 px-4">
 			{ isConnected
 				? (
 					isLoggedIn
@@ -116,9 +133,11 @@ function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void
 							</>
 						)
 				): (
-					<p>
-						No server connection.
-					</p>
+					<>
+						<p>
+							No server connection.
+						</p>
+					</>
 				)}
 		</div>
 	)

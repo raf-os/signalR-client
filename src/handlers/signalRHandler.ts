@@ -75,6 +75,7 @@ export default class SignalRHandler {
 
     isConnected(): boolean {
         if (!this.connection) return false;
+
         if (this.connection.state !== signalR.HubConnectionState.Connected) return false;
 
         return true;

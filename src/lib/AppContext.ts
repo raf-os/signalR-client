@@ -6,6 +6,7 @@ export type TAppContext = {
     sendMessage: (message: string, callback?: (success: boolean) => void) => void,
     signalHandler: SignalRHandler | undefined,
     isActionPending: boolean,
+    isConnected: boolean,
     username?: string,
 }
 
@@ -14,6 +15,7 @@ export const DefaultAppContext: TAppContext = {
     sendMessage: () => {},
     signalHandler: undefined,
     isActionPending: false,
+    isConnected: false,
 }
 
 const AppContext = createContext<TAppContext>(DefaultAppContext);

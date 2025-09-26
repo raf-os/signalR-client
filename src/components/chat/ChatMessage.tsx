@@ -39,7 +39,6 @@ function UserChatMessage({body, sender}: ChatMessageProps) {
 }
 
 function SystemChatMessage({body , metadata}: ChatMessageProps) {
-	console.log(metadata)
 	return (
 		<>
 			<div

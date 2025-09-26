@@ -11,22 +11,15 @@ export default function ChatInput() {
 
 	const isLoggedIn = useLoginStatus();
 
-	const handleSubmit = () => {
+	const handleSubmit = useCallback(() => {
 		if (!inputRef.current) return;
 
 		const val = inputRef.current.value;
 		if (val.trim().length === 0) return;
 
         inputRef.current.value = "";
-		sendMessage(val, (success) => {
-			if (success) {
-				if (inputRef.current) {
-					inputRef.current.value = "";
-					inputRef.current.focus();
-				}
-			}
-		});
-	}
+		sendMessage(val);
+	}, [inputRef, sendMessage, isActionPending]);
 
 	const handleKeyUp = (ev: React.KeyboardEvent<HTMLInputElement>) => {
         if (ev.key === "Enter") {
