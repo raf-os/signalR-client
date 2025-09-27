@@ -1,8 +1,9 @@
-import { useState, useRef, useTransition, useContext, useEffect, useCallback } from "react";
+import { useState, useRef, useTransition, useContext, useEffect, useCallback, startTransition } from "react";
 import SignalRHandler from "@/handlers/signalRHandler";
 import AppContext, { type TAppContext } from "@/lib/AppContext";
 
 import { ChatBox, ChatInput, ChatUserList } from "@/components/chat";
+import useAuth from "@/hooks/useAuth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +13,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 export default function App() {
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
-	const [ isActionPending, startTransition ] = useTransition();
+	const [ isActionPending, startActionTransition ] = useTransition();
 	const [ showLoginDialog, setShowLoginDialog ] = useState<boolean>(false);
 	const [ signalHandler, setSignalHandler ] = useState<SignalRHandler | undefined>(undefined);
 	const [ isConnected, setIsConnected ] = useState<boolean>(false);
@@ -29,15 +30,17 @@ export default function App() {
 		setIsLoginPending(false);
 		setShowLoginDialog(false);
 		setUsername(username);
-	}, []);
+	}, [userName]);
 
 	const sendMessage = useCallback((message: string, callback?: (success: boolean) => void) => {
 		if (!signalHandler) { return; }
 		if (!userName) { return; }
 
-		startTransition(async () => {
+		startActionTransition(async () => {
 			const success = await signalHandler.sendMessage(userName, message);
-			callback?.(success);
+			if (callback) {
+				startTransition(() => callback(success));
+			}
 		});
 	}, [userName, signalHandler]);
 
@@ -112,7 +115,7 @@ export default function App() {
 function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void, isLoginPending: boolean }) {
 	const { username, isConnected } = useContext(AppContext);
 
-	const isLoggedIn = username !== undefined;
+	const isLoggedIn = useAuth();
 
 	return (
 		<div className="flex items-center gap-2 text-sm border shadow-sm rounded-lg h-12 px-4">

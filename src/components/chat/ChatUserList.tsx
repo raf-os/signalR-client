@@ -19,7 +19,7 @@ const fakeUserList: TUserInfo[] = [...Array(25).keys()].map((i) => {
 
 export default function ChatUserList() {
     const [ loggedUsers, setLoggedUsers ] = useState<TUserInfo[]>([]);
-    const { signalHandler } = useContext(AppContext);
+    const { signalHandler, isConnected } = useContext(AppContext);
 
     const onUserListUpdate = (newList: TUserInfo[]) => {
         setLoggedUsers(newList);
@@ -46,8 +46,10 @@ export default function ChatUserList() {
                     className="p-2 size-full"
                 >
                     <div className="flex flex-col">
-                        { fakeUserList.map(user => <LoggedUser {...user} key={user.id} />) }
-                        { loggedUsers.map(user => <LoggedUser {...user} key={user.id} />) }
+                        { isConnected
+                            ? loggedUsers.map(user => <LoggedUser {...user} key={user.id} />)
+                            : <p className="text-sm">No server connection.</p>
+                        }
                     </div>
                     <ScrollArea.Scrollbar className="flex w-[8px] p-px">
                         <ScrollArea.Thumb className="flex-1 bg-border rounded-full" />
