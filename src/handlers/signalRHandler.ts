@@ -55,7 +55,7 @@ export default class SignalRHandler {
             this.observable.emit('onMessageReceived', { sender: username, body: message, type: type });
         });
 
-        this.connection?.on("Register", (username: string) => {
+        this.connection?.on("LogIn", (username: string) => {
             this.observable.emit('onSuccessfulLogin', { username: username });
         });
 
@@ -72,7 +72,7 @@ export default class SignalRHandler {
     async attemptLogin(username: string) {
         if (!this.connection) return;
 
-        this.connection.invoke("Register", username).catch(() => this.reportSystemMessage('Unknown error logging in.'));
+        this.connection.invoke("LogIn", username).catch(() => this.reportSystemMessage('Unknown error logging in.'));
     }
 
     reportSystemMessage(message: any, type?: string) {
