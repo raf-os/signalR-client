@@ -1,6 +1,6 @@
 import { useRef, useContext, useCallback } from "react";
 import AppContext from "@/lib/AppContext";
-import useLoginStatus from "@/hooks/useLoginStatus";
+import useAuth from "@/hooks/useAuth";
 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +9,7 @@ export default function ChatInput() {
 	const inputRef = useRef<HTMLInputElement>(null);
 	const { sendMessage, isActionPending } = useContext(AppContext);
 
-	const isLoggedIn = useLoginStatus();
+	const isAuthorized = useAuth();
 
 	const handleSubmit = useCallback(() => {
 		if (!inputRef.current) return;
@@ -36,14 +36,14 @@ export default function ChatInput() {
 				className="grow-1 shrink-1 border-neutral-200 bg-neutral-50"
 				ref={inputRef}
                 onKeyUp={handleKeyUp}
-				disabled={!isLoggedIn}
-				placeholder={!isLoggedIn? "Please log in to chat" : undefined}
+				disabled={!isAuthorized}
+				placeholder={!isAuthorized? "Please log in to chat" : undefined}
 			/>
 
 			<Button
 				className="grow-0 shrink-0"
 				onClick={handleSubmit}
-				disabled={isActionPending || !isLoggedIn}
+				disabled={isActionPending || !isAuthorized}
 			>
 				SUBMIT
 			</Button>

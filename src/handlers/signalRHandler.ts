@@ -9,9 +9,10 @@ type TUserInfo = {
     name: string,
 }
 
-type SignalRHandlerEvents = {
+export type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
     "onSuccessfulLogin": { username: string },
+    "onConnectionStart": {},
     "onConnectionClose": {},
     "onUserListUpdate": TUserInfo[]
 }
@@ -41,6 +42,7 @@ export default class SignalRHandler {
             .then(
                 () => {
                     this.reportSystemMessage('Connected to server.', "success");
+                    this.observable.emit('onConnectionStart', {});
                     return true;
                 },
                 () => { this.reportSystemMessage("Error connecting to server.", "error"); return false; }
