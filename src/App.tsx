@@ -2,7 +2,7 @@ import { useState, useRef, useTransition, useContext, useEffect, useCallback } f
 import SignalRHandler from "@/handlers/signalRHandler";
 import AppContext, { type TAppContext } from "@/lib/AppContext";
 
-import { ChatBox, ChatInput } from "@/components/chat";
+import { ChatBox, ChatInput, ChatUserList } from "@/components/chat";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,7 +92,10 @@ export default function App() {
 
 				<LoginStatusComponent onClick={() => setShowLoginDialog(true)} isLoginPending={isLoginPending} />
 
-				<ChatBox />
+				<div className="flex w-full h-2 gap-4 grow-1 shrink-1">
+					<ChatUserList />
+					<ChatBox />
+				</div>
 
 				<ChatInput />
 

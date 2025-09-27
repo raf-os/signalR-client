@@ -30,10 +30,10 @@ export default function ChatInput() {
 
 	return (
 		<div
-			className="flex w-full gap-4"
+			className="flex grow-0 shrink-0 w-full gap-2 rounded-lg shadow-md p-2 bg-neutral-300"
 		>
 			<Input
-				className="grow-1 shrink-1"
+				className="grow-1 shrink-1 border-neutral-200 bg-neutral-50"
 				ref={inputRef}
                 onKeyUp={handleKeyUp}
 				disabled={!isLoggedIn}

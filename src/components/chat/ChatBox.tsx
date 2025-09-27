@@ -33,24 +33,23 @@ export default function ChatBox() {
 	}, [chatMessages]);
 
 	return (
-		<ScrollArea.Root className="grow-1 shrink-1 h-1 overflow-hidden pr-[28px]" type="always" >
-			<ScrollArea.Viewport className="size-full p-3 border rounded-lg">
-				<div className="flex flex-col gap-2">
-				{ chatMessages.length === 0 ? (
-					<p>
-						Attempting connection...
-					</p>
-				): (
-					<>
-						{chatMessages.map((message, idx) => <ChatMessage key={`message-${idx}`} {...message} />)}
-					</>
-				) }
-				</div>
-				<ScrollArea.Scrollbar className="flex p-[4px] w-[20px] rounded-full border" forceMount>
-					<ScrollArea.Thumb className="bg-primary flex-1 rounded-full" />
-				</ScrollArea.Scrollbar>
-			</ScrollArea.Viewport>
-			
-		</ScrollArea.Root>
+			<ScrollArea.Root className="grow-1 shrink-1 pr-[28px]" type="always" >
+				<ScrollArea.Viewport className="size-full p-3 border rounded-lg shadow-md" ref={scrollAreaRef}>
+					<div className="flex flex-col gap-2">
+					{ chatMessages.length === 0 ? (
+						<p>
+							Attempting connection...
+						</p>
+					): (
+						<>
+							{chatMessages.map((message, idx) => <ChatMessage key={`message-${idx}`} {...message} />)}
+						</>
+					) }
+					</div>
+					<ScrollArea.Scrollbar className="flex p-[4px] w-[20px] rounded-full border shadow-md" forceMount>
+						<ScrollArea.Thumb className="bg-primary flex-1 rounded-full" />
+					</ScrollArea.Scrollbar>
+				</ScrollArea.Viewport>
+			</ScrollArea.Root>
 	)
 }

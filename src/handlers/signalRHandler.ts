@@ -4,10 +4,16 @@ import type { ChatMessageProps } from "@/components/chat/ChatMessage";
 
 const urlEndpoint = "http://localhost:5062/hub";
 
+type TUserInfo = {
+    id: string,
+    name: string,
+}
+
 type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
     "onSuccessfulLogin": { username: string },
     "onConnectionClose": {},
+    "onUserListUpdate": TUserInfo[]
 }
 
 export default class SignalRHandler {
@@ -33,7 +39,10 @@ export default class SignalRHandler {
 
         const success = await this.connection.start()
             .then(
-                () => { this.reportSystemMessage('Connected to server.', "success"); return true; },
+                () => {
+                    this.reportSystemMessage('Connected to server.', "success");
+                    return true;
+                },
                 () => { this.reportSystemMessage("Error connecting to server.", "error"); return false; }
             );
         return success;
@@ -46,6 +55,10 @@ export default class SignalRHandler {
 
         this.connection?.on("Register", (username: string) => {
             this.observable.emit('onSuccessfulLogin', { username: username });
+        });
+
+        this.connection?.on("UpdateClientList", (props: TUserInfo[]) => {
+            this.observable.emit('onUserListUpdate', props);
         });
 
         this.connection?.onclose(() => {
