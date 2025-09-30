@@ -4,6 +4,7 @@ import SignalRHandler from "@/handlers/signalRHandler";
 export type TAppContext = {
     attemptLogin: (username: string, password: string) => boolean,
     attemptSignup: (username: string, password: string) => Promise<boolean>,
+    attemptLogout: () => void,
     sendMessage: (message: string, callback?: (success: boolean) => void) => void,
     signalHandler: SignalRHandler | undefined,
     isActionPending: boolean,
@@ -14,6 +15,7 @@ export type TAppContext = {
 export const DefaultAppContext: TAppContext = {
     attemptLogin: () => false,
     attemptSignup: async () => false,
+    attemptLogout: () => false,
     sendMessage: () => {},
     signalHandler: undefined,
     isActionPending: false,

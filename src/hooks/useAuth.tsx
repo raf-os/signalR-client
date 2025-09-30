@@ -11,6 +11,12 @@ export default function useAuth() {
         }
     );
     useSignalEvent(
+        'onLogout',
+        () => {
+            setIsAuthorized(false);
+        }
+    );
+    useSignalEvent(
         'onConnectionClose',
         () => {
             setIsAuthorized(false);

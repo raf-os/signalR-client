@@ -2,7 +2,7 @@ import * as signalR from "@microsoft/signalr";
 import EventBus from "@/classes/EventBus";
 import type { ChatMessageProps } from "@/components/chat/ChatMessage";
 import AuthHandler from "@/handlers/authHandler";
-import type { StandardJsonResponse } from "@/lib/models/StandardJsonResponse";
+import type { StandardJsonResponse, AuthMetadata } from "@/lib/models/StandardJsonResponse";
 
 const urlEndpoint = "http://localhost:5062/hub";
 
@@ -14,6 +14,7 @@ type TUserInfo = {
 export type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
     "onSuccessfulLogin": { username: string, token: string, connectionId: string },
+    "onLogout": {},
     "onConnectionStart": {},
     "onConnectionClose": {},
     "onUserListUpdate": TUserInfo[]
@@ -91,7 +92,7 @@ export default class SignalRHandler {
     async attemptLogin(username: string, password: string) {
         if (!this.connection) return;
 
-        const result = await this.connection.invoke<StandardJsonResponse>("LogIn", username, password);
+        const result = await this.connection.invoke<StandardJsonResponse<AuthMetadata>>("LogIn", username, password);
 
         if (!result) {
             this.reportSystemMessage("Unknown error logging in.", "error");
@@ -114,7 +115,7 @@ export default class SignalRHandler {
 
         if (!token) return false;
 
-        const result = await this.connection.invoke<StandardJsonResponse>("ReLogIn", token);
+        const result = await this.connection.invoke<StandardJsonResponse<AuthMetadata>>("ReLogIn", token);
 
         if (result.success) {
             this.observable.emit('onSuccessfulLogin', { username: result.metadata.Username, token: result.metadata.Token, connectionId: result.metadata.ConnectionId });
@@ -126,6 +127,10 @@ export default class SignalRHandler {
 
     async attemptLogout() {
         if (!this.connection) return;
+        
+        this.authHandler.removeLoginToken();
+        await this.connection.invoke("LogOut");
+        this.observable.emit("onLogout", {});
     }
 
     reportSystemMessage(message: any, type?: string) {

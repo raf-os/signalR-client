@@ -46,6 +46,13 @@ export default function App() {
 		return true;
 	}
 
+	const executeLogout = () => {
+		if (!signalHandler) return;
+
+		signalHandler.attemptLogout();
+		setUsername(undefined);
+	}
+
 	const sendMessage = useCallback((message: string, callback?: (success: boolean) => void) => {
 		if (!signalHandler) { return; }
 		if (!userName) { return; }
@@ -90,6 +97,7 @@ export default function App() {
 	const ctx: TAppContext = {
 		attemptLogin: executeLogin,
 		attemptSignup: attemptSignUp,
+		attemptLogout: executeLogout,
 		sendMessage: sendMessage,
 		signalHandler: signalHandler,
 		isActionPending: isActionPending,
@@ -144,42 +152,61 @@ function LoginStatusComponent({
 	isLoginPending,
 	isSignupPending
 }: { onLoginClick: () => void, onSignupClick: () => void, isLoginPending: boolean, isSignupPending: boolean }) {
-	const { username, isConnected } = useContext(AppContext);
+	const { username, isConnected, attemptLogout } = useContext(AppContext);
 
 	const isLoggedIn = useAuth();
 
+	const handleLogout = () => {
+		attemptLogout();
+	}
+
 	return (
-		<div className="flex items-center gap-2 text-sm border shadow-sm rounded-lg h-12 px-4">
+		<div className="flex items-center justify-between gap-2 text-sm border shadow-sm rounded-lg h-12 px-2">
 			{ isConnected
 				? (
 					isLoggedIn
 						? (
-							<p>
-								Logged in as: <strong>{ username }</strong>
-							</p>
+							<>
+								<p className="px-2">
+									Logged in as: <strong>{ username }</strong>
+								</p>
+								<div>
+									<Button
+										size="sm"
+										onClick={handleLogout}
+									>
+										Log out
+									</Button>
+								</div>
+							</>
 						): (
 							<>
-								<p>You're not logged in.</p>
-								<Button
-									onClick={onLoginClick}
-									size="sm"
-									disabled={isLoginPending}
-								>
-									Log In
-								</Button>
+								<p className="px-2">
+									You're not logged in.
+								</p>
 
-								<Button
-									onClick={onSignupClick}
-									size="sm"
-									disabled={isSignupPending}
-								>
-									Sign up
-								</Button>
+								<div className="flex items-center gap-2">
+									<Button
+										onClick={onLoginClick}
+										size="sm"
+										disabled={isLoginPending}
+									>
+										Log In
+									</Button>
+
+									<Button
+										onClick={onSignupClick}
+										size="sm"
+										disabled={isSignupPending}
+									>
+										Sign up
+									</Button>
+								</div>
 							</>
 						)
 				): (
 					<>
-						<p>
+						<p className="px-2">
 							No server connection.
 						</p>
 					</>
@@ -207,8 +234,8 @@ function LoginBox({ isOpen, setIsOpen, isLoginPending }: { isOpen: boolean, setI
 					<DialogTitle>Log In</DialogTitle>
 				</DialogHeader>
 
-				<FormInputField header="Username" disabled={isLoginPending} ref={unameRef} />
-				<FormInputField header="Password" disabled={isLoginPending} ref={pwRef} />
+				<FormInputField header="Username" disabled={isLoginPending} ref={unameRef} onEnterKey={handleLogin} />
+				<FormInputField header="Password" type="password" disabled={isLoginPending} ref={pwRef} onEnterKey={handleLogin} />
 
 				<DialogFooter>
 					<Button
@@ -249,8 +276,8 @@ function SignupBox({isOpen, setIsOpen, isSignupPending}:
 					<DialogTitle>Sign Up</DialogTitle>
 				</DialogHeader>
 
-				<FormInputField header="Username" disabled={isSignupPending} ref={unameRef} />
-				<FormInputField header="Password" type="password" disabled={isSignupPending} ref={pwRef} />
+				<FormInputField header="Username" disabled={isSignupPending} ref={unameRef} onEnterKey={handleSignup} />
+				<FormInputField header="Password" type="password" disabled={isSignupPending} ref={pwRef} onEnterKey={handleSignup} />
 
 				<DialogFooter>
 					<Button
@@ -268,17 +295,24 @@ function SignupBox({isOpen, setIsOpen, isSignupPending}:
 
 type FormInputFieldProps = React.ComponentPropsWithRef<'input'> & {
 	header: string,
+	onEnterKey?: () => void,
 }
 
 function FormInputField({
 	header,
 	className: _,
+	onEnterKey,
 	...rest
 }: FormInputFieldProps){
+	const handleKeyUp = (ev: React.KeyboardEvent<HTMLInputElement>) => {
+		ev.preventDefault();
+		if (ev.key === "Enter") { onEnterKey?.(); }
+		
+	}
 	return (
 		<div className="flex flex-col gap-1">
 			<Label>{ header }</Label>
-			<Input {...rest} />
+			<Input {...rest} onKeyUp={handleKeyUp} />
 		</div>
 	)
 }
