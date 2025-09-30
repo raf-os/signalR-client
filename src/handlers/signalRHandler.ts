@@ -1,6 +1,8 @@
 import * as signalR from "@microsoft/signalr";
 import EventBus from "@/classes/EventBus";
 import type { ChatMessageProps } from "@/components/chat/ChatMessage";
+import AuthHandler from "@/handlers/authHandler";
+import type { StandardJsonResponse } from "@/lib/models/StandardJsonResponse";
 
 const urlEndpoint = "http://localhost:5062/hub";
 
@@ -11,7 +13,7 @@ type TUserInfo = {
 
 export type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
-    "onSuccessfulLogin": { username: string },
+    "onSuccessfulLogin": { username: string, token: string, connectionId: string },
     "onConnectionStart": {},
     "onConnectionClose": {},
     "onUserListUpdate": TUserInfo[]
@@ -20,6 +22,7 @@ export type SignalRHandlerEvents = {
 export default class SignalRHandler {
     connection?: signalR.HubConnection;
     observable: EventBus<SignalRHandlerEvents>;
+    authHandler = new AuthHandler();
     
     constructor() {
         this.observable = new EventBus<SignalRHandlerEvents>();
@@ -43,6 +46,7 @@ export default class SignalRHandler {
                 () => {
                     this.reportSystemMessage('Connected to server.', "success");
                     this.observable.emit('onConnectionStart', {});
+                    setTimeout(() => this.tokenSync());
                     return true;
                 },
                 () => { this.reportSystemMessage("Error connecting to server.", "error"); return false; }
@@ -55,10 +59,6 @@ export default class SignalRHandler {
             this.observable.emit('onMessageReceived', { sender: username, body: message, type: type });
         });
 
-        this.connection?.on("LogIn", (username: string) => {
-            this.observable.emit('onSuccessfulLogin', { username: username });
-        });
-
         this.connection?.on("UpdateClientList", (props: TUserInfo[]) => {
             this.observable.emit('onUserListUpdate', props);
         });
@@ -69,10 +69,63 @@ export default class SignalRHandler {
         });
     }
 
-    async attemptLogin(username: string) {
+    async attemptRegister(username: string, password: string) {
+        if (!this.connection) return false;
+
+        const result = await this.connection.invoke<StandardJsonResponse>("Register", { Username: username, Password: password });
+
+        if (!result) {
+            this.reportSystemMessage("Unknown error occurred.", "error");
+            return false;
+        }
+
+        if (result.success) {
+            this.reportSystemMessage("Registered successfully. You may now log in.", "success");
+            return true;
+        } else {
+            this.reportSystemMessage(result.message || "Unknown error occurred.", "error");
+            return false;
+        }
+    }
+
+    async attemptLogin(username: string, password: string) {
         if (!this.connection) return;
 
-        this.connection.invoke("LogIn", username).catch(() => this.reportSystemMessage('Unknown error logging in.'));
+        const result = await this.connection.invoke<StandardJsonResponse>("LogIn", username, password);
+
+        if (!result) {
+            this.reportSystemMessage("Unknown error logging in.", "error");
+        }
+
+        if (result.success) {
+            this.authHandler.updateLoginToken(result.metadata.Token);
+            this.observable.emit('onSuccessfulLogin', { username: result.metadata.Username, token: result.metadata.Token, connectionId: result.metadata.ConnectionId });
+            return;
+        } else {
+            this.reportSystemMessage(result.message || "Unknown login error.", "error");
+            return;
+        }
+    }
+
+    async tokenSync() {
+        if (!this.connection) return false;
+
+        const token = this.authHandler.fetchLoginToken();
+
+        if (!token) return false;
+
+        const result = await this.connection.invoke<StandardJsonResponse>("ReLogIn", token);
+
+        if (result.success) {
+            this.observable.emit('onSuccessfulLogin', { username: result.metadata.Username, token: result.metadata.Token, connectionId: result.metadata.ConnectionId });
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    async attemptLogout() {
+        if (!this.connection) return;
     }
 
     reportSystemMessage(message: any, type?: string) {

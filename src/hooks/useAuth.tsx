@@ -7,7 +7,6 @@ export default function useAuth() {
     useSignalEvent(
         'onSuccessfulLogin',
         () => {
-            console.log("callback test")
             setIsAuthorized(true);
         }
     );

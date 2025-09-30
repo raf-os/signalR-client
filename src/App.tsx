@@ -14,14 +14,16 @@ export default function App() {
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
 	const [ isActionPending, startActionTransition ] = useTransition();
+	const [ isSignupPending, startSignupTransition ] = useTransition();
 	const [ showLoginDialog, setShowLoginDialog ] = useState<boolean>(false);
+	const [ showSignupDialog, setShowSignupDialog ] = useState<boolean>(false);
 	const [ signalHandler, setSignalHandler ] = useState<SignalRHandler | undefined>(undefined);
 	const [ isConnected, setIsConnected ] = useState<boolean>(false);
 
-	const executeLogin = useCallback((username: string) => {
+	const executeLogin = useCallback((username: string, password: string) => {
 		if (!signalHandler) return false;
 		if (isLoginPending) return false;
-		signalHandler.attemptLogin(username);
+		signalHandler.attemptLogin(username, password);
 		setIsLoginPending(true);
 		return true;
 	}, [signalHandler, userName]);
@@ -31,6 +33,18 @@ export default function App() {
 		setShowLoginDialog(false);
 		setUsername(username);
 	}, [userName]);
+
+	const attemptSignUp = async (username: string, password: string) => {
+		if (!signalHandler) return false;
+
+		setShowSignupDialog(false);
+
+		startSignupTransition(async() => {
+			await signalHandler.attemptRegister(username, password);
+		});
+
+		return true;
+	}
 
 	const sendMessage = useCallback((message: string, callback?: (success: boolean) => void) => {
 		if (!signalHandler) { return; }
@@ -75,6 +89,7 @@ export default function App() {
 
 	const ctx: TAppContext = {
 		attemptLogin: executeLogin,
+		attemptSignup: attemptSignUp,
 		sendMessage: sendMessage,
 		signalHandler: signalHandler,
 		isActionPending: isActionPending,
@@ -93,7 +108,12 @@ export default function App() {
 					React live chat app
 				</h1>
 
-				<LoginStatusComponent onClick={() => setShowLoginDialog(true)} isLoginPending={isLoginPending} />
+				<LoginStatusComponent
+					onLoginClick={() => setShowLoginDialog(true)}
+					onSignupClick={() => setShowSignupDialog(true)}
+					isLoginPending={isLoginPending}
+					isSignupPending={isSignupPending}
+				/>
 
 				<div className="flex w-full h-2 gap-4 grow-1 shrink-1">
 					<ChatUserList />
@@ -107,12 +127,23 @@ export default function App() {
 					setIsOpen={setShowLoginDialog}
 					isLoginPending={isLoginPending}
 				/>
+
+				<SignupBox
+					isOpen={showSignupDialog}
+					setIsOpen={setShowSignupDialog}
+					isSignupPending={isSignupPending}
+				/>
 			</div>
 		</AppContext.Provider>
 	)
 }
 
-function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void, isLoginPending: boolean }) {
+function LoginStatusComponent({
+	onLoginClick,
+	onSignupClick,
+	isLoginPending,
+	isSignupPending
+}: { onLoginClick: () => void, onSignupClick: () => void, isLoginPending: boolean, isSignupPending: boolean }) {
 	const { username, isConnected } = useContext(AppContext);
 
 	const isLoggedIn = useAuth();
@@ -130,11 +161,19 @@ function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void
 							<>
 								<p>You're not logged in.</p>
 								<Button
-									onClick={onClick}
+									onClick={onLoginClick}
 									size="sm"
 									disabled={isLoginPending}
 								>
 									Log In
+								</Button>
+
+								<Button
+									onClick={onSignupClick}
+									size="sm"
+									disabled={isSignupPending}
+								>
+									Sign up
 								</Button>
 							</>
 						)
@@ -150,12 +189,15 @@ function LoginStatusComponent({ onClick, isLoginPending }: { onClick: () => void
 }
 
 function LoginBox({ isOpen, setIsOpen, isLoginPending }: { isOpen: boolean, setIsOpen: (o: boolean) => void, isLoginPending: boolean }) {
-	const inputRef = useRef<HTMLInputElement>(null);
+	const unameRef = useRef<HTMLInputElement>(null);
+	const pwRef = useRef<HTMLInputElement>(null);
 	const { attemptLogin } = useContext(AppContext);
 
 	const handleLogin = () => {
-		if (inputRef.current === null) return;
-		attemptLogin(inputRef.current.value);
+		if (unameRef.current === null) return;
+		if (pwRef.current === null) return;
+
+		attemptLogin(unameRef.current.value, pwRef.current.value);
 	}
 
 	return (
@@ -165,10 +207,8 @@ function LoginBox({ isOpen, setIsOpen, isLoginPending }: { isOpen: boolean, setI
 					<DialogTitle>Log In</DialogTitle>
 				</DialogHeader>
 
-				<div className="flex flex-col gap-1">
-					<Label>Username</Label>
-					<Input ref={inputRef} disabled={isLoginPending} />
-				</div>
+				<FormInputField header="Username" disabled={isLoginPending} ref={unameRef} />
+				<FormInputField header="Password" disabled={isLoginPending} ref={pwRef} />
 
 				<DialogFooter>
 					<Button
@@ -181,5 +221,64 @@ function LoginBox({ isOpen, setIsOpen, isLoginPending }: { isOpen: boolean, setI
 				</DialogFooter>
 			</DialogContent>
 		</Dialog>
+	)
+}
+
+function SignupBox({isOpen, setIsOpen, isSignupPending}:
+	{ isOpen: boolean, setIsOpen: (o: boolean) => void, isSignupPending: boolean}
+) {
+	const unameRef = useRef<HTMLInputElement>(null);
+	const pwRef = useRef<HTMLInputElement>(null);
+
+	const { attemptSignup } = useContext(AppContext);
+
+	const handleSignup = () => {
+		if (unameRef.current === null) return;
+		if (pwRef.current === null) return;
+
+		const _uname = unameRef.current.value;
+		const _pw = pwRef.current.value;
+
+		attemptSignup(_uname, _pw);
+	}
+
+	return (
+		<Dialog open={isOpen} onOpenChange={setIsOpen}>
+			<DialogContent showCloseButton={false}>
+				<DialogHeader>
+					<DialogTitle>Sign Up</DialogTitle>
+				</DialogHeader>
+
+				<FormInputField header="Username" disabled={isSignupPending} ref={unameRef} />
+				<FormInputField header="Password" type="password" disabled={isSignupPending} ref={pwRef} />
+
+				<DialogFooter>
+					<Button
+						onClick={handleSignup}
+						type="button"
+						disabled={isSignupPending}
+					>
+						Sign Up
+					</Button>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
+	)
+}
+
+type FormInputFieldProps = React.ComponentPropsWithRef<'input'> & {
+	header: string,
+}
+
+function FormInputField({
+	header,
+	className: _,
+	...rest
+}: FormInputFieldProps){
+	return (
+		<div className="flex flex-col gap-1">
+			<Label>{ header }</Label>
+			<Input {...rest} />
+		</div>
 	)
 }
