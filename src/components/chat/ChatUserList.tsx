@@ -3,19 +3,19 @@ import * as ScrollArea from "@radix-ui/react-scroll-area";
 import AppContext from "@/lib/AppContext";
 import { useContext, useState, useEffect } from "react";
 
-import { faker } from "@faker-js/faker";
+//import { faker } from "@faker-js/faker";
 
 type TUserInfo = {
     id: string,
     name: string
 }
 
-const fakeUserList: TUserInfo[] = [...Array(25).keys()].map((i) => {
-    return {
-        id: `FAKER(${i})`,
-        name: faker.internet.username()
-    }
-});
+// const fakeUserList: TUserInfo[] = [...Array(25).keys()].map((i) => {
+//     return {
+//         id: `FAKER(${i})`,
+//         name: faker.internet.username()
+//     }
+// });
 
 export default function ChatUserList() {
     const [ loggedUsers, setLoggedUsers ] = useState<TUserInfo[]>([]);

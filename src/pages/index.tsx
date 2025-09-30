@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-export default function App() {
+export default function ChatApp() {
 	const [ userName, setUsername ] = useState<string | undefined>(undefined);
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
 	const [ isActionPending, startActionTransition ] = useTransition();
