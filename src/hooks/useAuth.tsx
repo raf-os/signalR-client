@@ -1,13 +1,15 @@
 import { useState } from "react";
 import useSignalEvent from "./useSignalEvent";
+import { AuthState } from "@/lib/models/AuthMetadata";
 
-export default function useAuth() {
+export default function useAuth(authLevel: number = AuthState.User) {
     const [ isAuthorized, setIsAuthorized ] = useState<boolean>(false);
 
     useSignalEvent(
         'onSuccessfulLogin',
-        () => {
-            setIsAuthorized(true);
+        ({ auth }) => {
+            if (auth >= authLevel) { setIsAuthorized(true); }
+            else { setIsAuthorized(false); }
         }
     );
     useSignalEvent(
@@ -25,3 +27,5 @@ export default function useAuth() {
 
     return isAuthorized;
 }
+
+export { AuthState };

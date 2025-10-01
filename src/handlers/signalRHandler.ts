@@ -13,7 +13,7 @@ type TUserInfo = {
 
 export type SignalRHandlerEvents = {
     "onMessageReceived": ChatMessageProps,
-    "onSuccessfulLogin": { username: string, token: string, connectionId: string },
+    "onSuccessfulLogin": AuthMetadata,
     "onLogout": {},
     "onConnectionStart": {},
     "onConnectionClose": {},
@@ -56,8 +56,8 @@ export default class SignalRHandler {
     }
 
     private setupCallbacks() {
-        this.connection?.on("ReceiveMessage", (username: string, message: string, type: "user" | "system") => {
-            this.observable.emit('onMessageReceived', { sender: username, body: message, type: type });
+        this.connection?.on("ReceiveMessage", ({ id , sender, message, type}) => {
+            this.observable.emit('onMessageReceived', { id: id, sender: sender, body: message, type: type });
         });
 
         this.connection?.on("UpdateClientList", (props: TUserInfo[]) => {
@@ -93,14 +93,20 @@ export default class SignalRHandler {
         if (!this.connection) return;
 
         const result = await this.connection.invoke<StandardJsonResponse<AuthMetadata>>("LogIn", username, password);
+        console.log(result)
 
         if (!result) {
             this.reportSystemMessage("Unknown error logging in.", "error");
         }
 
         if (result.success) {
-            this.authHandler.updateLoginToken(result.metadata.Token);
-            this.observable.emit('onSuccessfulLogin', { username: result.metadata.Username, token: result.metadata.Token, connectionId: result.metadata.ConnectionId });
+            this.authHandler.updateLoginToken(result.metadata.token);
+            this.observable.emit('onSuccessfulLogin',{
+                username: result.metadata.username,
+                token: result.metadata.token,
+                connectionId: result.metadata.connectionId,
+                auth: result.metadata.auth
+            });
             return;
         } else {
             this.reportSystemMessage(result.message || "Unknown login error.", "error");
@@ -118,7 +124,12 @@ export default class SignalRHandler {
         const result = await this.connection.invoke<StandardJsonResponse<AuthMetadata>>("ReLogIn", token);
 
         if (result.success) {
-            this.observable.emit('onSuccessfulLogin', { username: result.metadata.Username, token: result.metadata.Token, connectionId: result.metadata.ConnectionId });
+            this.observable.emit('onSuccessfulLogin',{
+                username: result.metadata.username,
+                token: result.metadata.token,
+                connectionId: result.metadata.connectionId,
+                auth: result.metadata.auth
+            });
             return true;
         } else {
             return false;
@@ -135,14 +146,14 @@ export default class SignalRHandler {
 
     reportSystemMessage(message: any, type?: string) {
         const metadata = (type) ? { type: type } : undefined;
-        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system", metadata});
+        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system", metadata });
     }
 
-    async sendMessage(user:string, body: string): Promise<boolean> {
+    async sendMessage(body: string): Promise<boolean> {
         if (!this.connection) { console.log("No connection"); return false; }
         if (body.trim().length === 0) { return false; }
-        await this.connection.send("NewMessage", "user", body);
-        this.observable.emit('onMessageReceived', { sender: user, body: body, type: "user" });
+        await this.connection.send("NewMessage", body);
+        //this.observable.emit('onMessageReceived', { sender: user, body: body, type: "user" });
         return true;
     }
 

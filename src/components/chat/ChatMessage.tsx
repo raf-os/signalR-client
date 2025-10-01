@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export type ChatMessageProps = {
+	id?: string,
 	type: "user" | "system",
 	body: string,
 	sender: string,
@@ -23,11 +24,12 @@ export default function ChatMessage(props: ChatMessageProps) {
 	)
 }
 
-function UserChatMessage({body, sender}: ChatMessageProps) {
+function UserChatMessage({body, sender, id}: ChatMessageProps) {
 	return (
 		<>
 			<div
 				className="text-sm font-neutral-600 font-bold leading-4"
+				data-messageid={id}
 			>
 				{ sender }
 			</div>

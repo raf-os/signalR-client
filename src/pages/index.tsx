@@ -3,7 +3,9 @@ import SignalRHandler from "@/handlers/signalRHandler";
 import AppContext, { type TAppContext } from "@/lib/AppContext";
 
 import { ChatBox, ChatInput, ChatUserList } from "@/components/chat";
-import useAuth from "@/hooks/useAuth";
+import { AuthUserData, type AuthMetadata } from "@/lib/models/AuthMetadata";
+
+import AuthBar from "@/components/chat/AuthBar";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function ChatApp() {
-	const [ userName, setUsername ] = useState<string | undefined>(undefined);
+	const [ userData, setUserData ] = useState<AuthUserData | undefined>(undefined);
 	const [ isLoginPending, setIsLoginPending ] = useState<boolean>(false);
 	const [ isActionPending, startActionTransition ] = useTransition();
 	const [ isSignupPending, startSignupTransition ] = useTransition();
@@ -26,13 +28,14 @@ export default function ChatApp() {
 		signalHandler.attemptLogin(username, password);
 		setIsLoginPending(true);
 		return true;
-	}, [signalHandler, userName]);
+	}, [signalHandler, userData]);
 
-	const onSuccessfulLogin = useCallback(({username}: {username: string}) => {
+	const onSuccessfulLogin = useCallback((props: AuthMetadata) => {
 		setIsLoginPending(false);
 		setShowLoginDialog(false);
-		setUsername(username);
-	}, [userName]);
+		const userData = new AuthUserData(props.username, props.token, props.connectionId, props.auth);
+		setUserData(userData);
+	}, [userData]);
 
 	const attemptSignUp = async (username: string, password: string) => {
 		if (!signalHandler) return false;
@@ -50,20 +53,20 @@ export default function ChatApp() {
 		if (!signalHandler) return;
 
 		signalHandler.attemptLogout();
-		setUsername(undefined);
+		setUserData(undefined);
 	}
 
 	const sendMessage = useCallback((message: string, callback?: (success: boolean) => void) => {
 		if (!signalHandler) { return; }
-		if (!userName) { return; }
+		if (!userData) { return; }
 
 		startActionTransition(async () => {
-			const success = await signalHandler.sendMessage(userName, message);
+			const success = await signalHandler.sendMessage(message);
 			if (callback) {
 				startTransition(() => callback(success));
 			}
 		});
-	}, [userName, signalHandler]);
+	}, [userData, signalHandler]);
 
 	useEffect(() => {
 		const onConnectionOpen = () => {
@@ -102,7 +105,7 @@ export default function ChatApp() {
 		signalHandler: signalHandler,
 		isActionPending: isActionPending,
 		isConnected: isConnected,
-		username: userName
+		userData: userData
 	}
 
 	return (
@@ -116,7 +119,7 @@ export default function ChatApp() {
 					React live chat app
 				</h1>
 
-				<LoginStatusComponent
+				<AuthBar
 					onLoginClick={() => setShowLoginDialog(true)}
 					onSignupClick={() => setShowSignupDialog(true)}
 					isLoginPending={isLoginPending}
@@ -143,75 +146,6 @@ export default function ChatApp() {
 				/>
 			</div>
 		</AppContext.Provider>
-	)
-}
-
-function LoginStatusComponent({
-	onLoginClick,
-	onSignupClick,
-	isLoginPending,
-	isSignupPending
-}: { onLoginClick: () => void, onSignupClick: () => void, isLoginPending: boolean, isSignupPending: boolean }) {
-	const { username, isConnected, attemptLogout } = useContext(AppContext);
-
-	const isLoggedIn = useAuth();
-
-	const handleLogout = () => {
-		attemptLogout();
-	}
-
-	return (
-		<div className="flex items-center justify-between gap-2 text-sm border shadow-sm rounded-lg h-12 px-2">
-			{ isConnected
-				? (
-					isLoggedIn
-						? (
-							<>
-								<p className="px-2">
-									Logged in as: <strong>{ username }</strong>
-								</p>
-								<div>
-									<Button
-										size="sm"
-										onClick={handleLogout}
-									>
-										Log out
-									</Button>
-								</div>
-							</>
-						): (
-							<>
-								<p className="px-2">
-									You're not logged in.
-								</p>
-
-								<div className="flex items-center gap-2">
-									<Button
-										onClick={onLoginClick}
-										size="sm"
-										disabled={isLoginPending}
-									>
-										Log In
-									</Button>
-
-									<Button
-										onClick={onSignupClick}
-										size="sm"
-										disabled={isSignupPending}
-									>
-										Sign up
-									</Button>
-								</div>
-							</>
-						)
-				): (
-					<>
-						<p className="px-2">
-							No server connection.
-						</p>
-					</>
-				)}
-		</div>
 	)
 }
 

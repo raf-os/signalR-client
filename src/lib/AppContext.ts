@@ -1,5 +1,6 @@
 import { createContext } from "react";
 import SignalRHandler from "@/handlers/signalRHandler";
+import { type AuthUserData } from "./models/AuthMetadata";
 
 export type TAppContext = {
     attemptLogin: (username: string, password: string) => boolean,
@@ -9,7 +10,7 @@ export type TAppContext = {
     signalHandler: SignalRHandler | undefined,
     isActionPending: boolean,
     isConnected: boolean,
-    username?: string,
+    userData?: AuthUserData,
 }
 
 export const DefaultAppContext: TAppContext = {
