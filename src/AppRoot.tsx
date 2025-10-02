@@ -1,6 +1,10 @@
 // Basic routing
 
 import { createBrowserRouter, RouterProvider, type RouteObject } from "react-router";
+import { AuthState } from "@/hooks/useAuth";
+import validateToken from "@/pages/ModTools/(auth)/validateToken";
+
+import ModToolsRoute from "@/pages/ModTools/route";
 
 const routeObject: RouteObject[] = [{
     path: "/",
@@ -11,9 +15,14 @@ const routeObject: RouteObject[] = [{
 }, {
     path: "/mod",
     lazy: async () => {
-        const Component = (await import("@pages/ModTools")).default;
-        return { Component }
-    }
+        const Component = (await import("@/pages/ModTools")).default;
+        return { Component };
+    },
+    loader: async () => {
+        const isValid = await validateToken(AuthState.Operator);
+        return { isValid: isValid };
+    },
+    children: ModToolsRoute
 }];
 
 const router = createBrowserRouter(routeObject);

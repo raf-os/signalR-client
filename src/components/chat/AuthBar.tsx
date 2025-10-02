@@ -1,6 +1,7 @@
 import { useContext } from "react";
 import AppContext from "@/lib/AppContext";
 import useAuth, { AuthState } from "@/hooks/useAuth";
+import { NavLink } from "react-router";
 
 import { Button } from "@ui/button";
 
@@ -34,8 +35,13 @@ export default function AuthBar({
                                         <Button
                                             variant="secondary"
                                             size="sm"
+											asChild
                                         >
-                                            mod tools
+                                            <NavLink
+												to="/mod"
+											>
+												mod tools
+											</NavLink>
                                         </Button>
                                     )}
                                 </div>
