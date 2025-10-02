@@ -1,4 +1,14 @@
+import PageLayout from "./components/PageLayout";
+
 export default function DefaultModPage() {
+    return (
+        <PageLayout
+            mainContent={<DefaultModPageContent />}
+        />
+    )
+}
+
+export function DefaultModPageContent() {
     return (
         <div className="flex flex-col gap-2">
             <p>This is the EXCLUSIVE mod dashboard.</p>

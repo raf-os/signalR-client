@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import GlobalConfig from "@/lib/GlobalConfig";
 import AuthHandler from "@/handlers/authHandler";
 import { useLoaderData } from "react-router";
@@ -6,13 +8,35 @@ import PageLayout from "../components/PageLayout";
 
 import {
     Table,
+    TableWrapper,
     TableBody,
-    TableCaption,
     TableCell,
     TableHead,
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+
+import {
+    Sheet,
+    SheetContent,
+    SheetDescription,
+    SheetFooter,
+    SheetHeader,
+    SheetTitle,
+} from "@/components/ui/sheet";
+
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
+
+import { Input } from "@ui/input";
+import { Label } from "@ui/label";
+import { Button } from "@/components/ui/button";
+import { SelectGroup } from "@radix-ui/react-select";
 
 export default function UserListPage() {
     const { success: isValid } = useLoaderData();
@@ -20,18 +44,9 @@ export default function UserListPage() {
     return isValid? (
         <PageLayout
             mainContent={<UserListContent />}
-            sideBar={<UserListSidebar />}
         />
     ) : (
         <>Nope</>
-    )
-}
-
-function UserListSidebar() {
-    return (
-        <p>
-            Aye, this be a sidebar.
-        </p>
     )
 }
 
@@ -39,36 +54,84 @@ function UserListContent() {
     const { userList } = useLoaderData<TLoader>();
     return (
         <>
-            <h1 className="text-lg font-medium">
+            <h1 className="text-xl font-medium">
                 Registered users
             </h1>
-            <div className="relative w-full overflow-x-auto border border-gray-800 rounded-lg shadow-md">
-                <table className="w-full caption-bottom text-sm">
-                    <thead>
-                        <tr className="bg-gray-800 text-neutral-50 text-base">
+            <p>
+                This is a list of all registered users in this service.
+            </p>
+            <TableWrapper className="outline outline-offset-1 outline-blue-800 rounded-lg">
+                <Table>
+                    <TableHeader>
+                        <TableRow className="bg-blue-800 text-neutral-50 text-base">
                             <TableHead>Username</TableHead>
                             <TableHead className="w-[240px] text-right">Auth level</TableHead>
-                        </tr>
-                    </thead>
-                    <TableBody>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody className="bg-blue-950">
                         { userList?.map((u, idx) => (
                             <UserItem userInfo={u} key={idx} />
                         )) }
                     </TableBody>
                     
-                </table>
-            </div>
+                </Table>
+            </TableWrapper>
         </>
     )
 }
 
 function UserItem({ userInfo }: { userInfo: TUserInfo }) {
-    const authMap = ['Guest', 'User', 'Operator', 'Administrator'].at(userInfo.auth) || "N/A";
+    const authMap = ['Guest', 'User', 'Operator', 'Administrator'];
+    const authValue = authMap.at(userInfo.auth) || "N/A";
+    const [ isEditorOpen, setIsEditorOpen ] = useState<boolean>(false);
     return (
-        <TableRow className="hover:bg-black/10">
-            <TableCell>{ userInfo.name }</TableCell>
-            <TableCell className="text-right">{ authMap }</TableCell>
-        </TableRow>
+        <>
+            <TableRow className="hover:bg-neutral-950/10 cursor-pointer group" onClick={() => setIsEditorOpen(true)} role="button">
+                <TableCell>
+                    <span
+                        className="group-hover:text-orange-300 font-medium"
+                        onClick={() => setIsEditorOpen(true)}
+                    >
+                        { userInfo.name }
+                    </span>
+                </TableCell>
+                <TableCell className="text-right">{ authValue }</TableCell>
+            </TableRow>
+            <Sheet open={isEditorOpen} onOpenChange={setIsEditorOpen}>
+                <SheetContent>
+                    <SheetHeader>
+                        <SheetTitle>
+                            Editing user "<span className="text-blue-600">{ userInfo.name }</span>"
+                        </SheetTitle>
+                        <SheetDescription>
+                            Edit details below then click save at the bottom
+                        </SheetDescription>
+                    </SheetHeader>
+                    <div className="flex flex-col gap-2 px-4">
+                        <Label>Username</Label>
+                        <Input value={userInfo.name} disabled />
+
+                        <Label>Account level</Label>
+                        <Select defaultValue={`${userInfo.auth}`}>
+                            <SelectTrigger className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectGroup>
+                                    { authMap.map((a, idx) => (
+                                        <SelectItem value={`${idx}`} key={idx}>{ a }</SelectItem>
+                                    )) }
+                                </SelectGroup>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <SheetFooter>
+                        <Button variant="destructive">Cancel</Button>
+                        <Button>Save</Button>
+                    </SheetFooter>
+                </SheetContent>
+            </Sheet>
+        </>
     )
 }
 

@@ -29,7 +29,7 @@ export function MainContentLayout({ children, className, ...rest }: React.Compon
             {...rest}
         >
             <div
-                className="flex flex-col w-4xl gap-3"
+                className="flex flex-col w-4xl gap-4"
                 data-slot="main-content"
             >
                 {children}
