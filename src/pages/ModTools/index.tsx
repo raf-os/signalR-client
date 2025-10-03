@@ -5,16 +5,24 @@ import { useLoaderData, NavLink, Outlet } from "react-router";
 import NotAuthorized from "@pages/NotAuthorized";
 import { NavBarList, NavBarItem } from "./components/NavBar";
 import { Button } from "@/components/ui/button";
+import { DashboardContext } from "./DashboardContext";
 
 export default function ModTools(){
-    const { isValid } = useLoaderData();
+    const { isValid, authState } = useLoaderData<{isValid: boolean, authState?: number}>();
     const Comp = isValid ? <Page /> : <NotAuthorized />;
-    return Comp;
+    const ctx = {
+        authState: authState || 0,
+    };
+    return (
+        <DashboardContext.Provider value={ctx}>
+            { Comp }
+        </DashboardContext.Provider>
+    );
 }
 
 function Page() {
     return (
-        <div className="flex w-full h-dvh bg-zinc-900 text-neutral-50">
+        <div className="dark flex w-full h-dvh bg-zinc-900 text-neutral-50">
             <ModNavBar />
 
             <div className="flex w-full h-full grow-1 shrink-1 relative">

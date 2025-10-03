@@ -19,8 +19,8 @@ const routeObject: RouteObject[] = [{
         return { Component };
     },
     loader: async () => {
-        const isValid = await validateToken(AuthState.Operator);
-        return { isValid: isValid };
+        const { isValid, authState } = await validateToken(AuthState.Operator);
+        return { isValid, authState };
     },
     children: ModToolsRoute
 }];

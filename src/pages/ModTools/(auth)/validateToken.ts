@@ -22,15 +22,15 @@ export default async function validateToken(required: number = AuthState.Guest) 
 
         if (!response.ok) {
             console.log("Error validating login token: ", response.status);
-            return false;
+            return { isValid: false };
         }
 
         const rBody = await response.json();
         const authLevel = Number(rBody.auth);
 
-        return (authLevel >= required);
+        return { isValid: authLevel >= required, authState: authLevel };
     } catch(error) {
         console.log("Error sending fetch request to server.", error);
-        return false;
+        return { isValid: false };
     }
 }
