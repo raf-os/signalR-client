@@ -30,6 +30,7 @@ import {
 import { Input } from "@ui/input";
 import { Label } from "@ui/label";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 import { X as XIcon, ChevronDownIcon } from "lucide-react";
 import { DashboardContext } from "../DashboardContext";
@@ -79,6 +80,7 @@ function UserListContent() {
                     if (request.success) {
                         setUserList(request.content);
                     }
+                    callback?.({ success: request.success, message: result.message });
                     setIsEditorOpen(false);
                 });
             } else if (callback) {
@@ -101,15 +103,15 @@ function UserListContent() {
             <p>
                 This is a list of all registered users in this service.
             </p>
-            <TableWrapper className="outline outline-offset-1 outline-blue-800 rounded-lg">
+            <TableWrapper className="outline-1 outline-orange-900 rounded-lg">
                 <Table>
                     <TableHeader>
-                        <TableRow className="bg-blue-800 text-neutral-50 text-base">
+                        <TableRow className="bg-orange-900 text-orange-200 text-base">
                             <TableHead>Username</TableHead>
                             <TableHead className="w-[240px] text-right">Auth level</TableHead>
                         </TableRow>
                     </TableHeader>
-                    <TableBody className="bg-blue-950">
+                    <TableBody className="bg-zinc-900">
                         { userList?.map((u, idx) => (
                             <UserItem userInfo={u} key={idx} />
                         )) }
@@ -130,7 +132,7 @@ function UserItem({ userInfo }: { userInfo: TUserInfo }) {
 
     return (
         <>
-            <TableRow className="hover:bg-neutral-950/10 cursor-pointer group" onClick={() => openEditWindow(userInfo)} role="button">
+            <TableRow className="hover:bg-orange-800/10 cursor-pointer group" onClick={() => openEditWindow(userInfo)} role="button">
                 <TableCell>
                     <span
                         className="group-hover:text-orange-300 font-medium"
@@ -169,6 +171,11 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
         )
     }
 
+    const editSubmitCallback = ({ success, message }: { success: boolean, message?: string}) => {
+        if (success) { toast.success("User profile saved successfully!"); }
+        else if (message) { toast.error(message); }
+    }
+
     const handleSubmit = (formData: FormData) => {
         const userId = formData.get("userId");
         const userName = formData.get("userName");
@@ -180,7 +187,9 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
             userId: Number(userId),
             userName: String(userName),
             userAuth: Number(userAuth)
-        });
+            },
+            editSubmitCallback
+        );
     }
 
     return (

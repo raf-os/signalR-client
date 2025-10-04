@@ -6,6 +6,7 @@ import NotAuthorized from "@pages/NotAuthorized";
 import { NavBarList, NavBarItem } from "./components/NavBar";
 import { Button } from "@/components/ui/button";
 import { DashboardContext } from "./DashboardContext";
+import { Toaster } from "@/components/ui/sonner";
 
 export default function ModTools(){
     const { isValid, authState } = useLoaderData<{isValid: boolean, authState?: number}>();
@@ -16,6 +17,7 @@ export default function ModTools(){
     return (
         <DashboardContext.Provider value={ctx}>
             { Comp }
+            <Toaster />
         </DashboardContext.Provider>
     );
 }
