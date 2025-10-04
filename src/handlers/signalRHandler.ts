@@ -56,8 +56,8 @@ export default class SignalRHandler {
     }
 
     private setupCallbacks() {
-        this.connection?.on("ReceiveMessage", ({ id , sender, message, type}) => {
-            this.observable.emit('onMessageReceived', { id: id, sender: sender, body: message, type: type });
+        this.connection?.on("ReceiveMessage", (props: ChatMessageProps) => {
+            this.observable.emit('onMessageReceived', props);
         });
 
         this.connection?.on("UpdateClientList", (props: TUserInfo[]) => {
@@ -146,7 +146,7 @@ export default class SignalRHandler {
 
     reportSystemMessage(message: any, type?: string) {
         const metadata = (type) ? { type: type } : undefined;
-        this.observable.emit('onMessageReceived', { sender: "sys", body: message, type: "system", metadata });
+        this.observable.emit('onMessageReceived', { sender: "sys", message: message, type: "system", metadata });
     }
 
     async sendMessage(body: string): Promise<boolean> {

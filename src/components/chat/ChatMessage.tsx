@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 export type ChatMessageProps = {
 	id?: string,
 	type: "user" | "system",
-	body: string,
+	message: string,
 	sender: string,
     metadata?: {
 		type?: "success" | "error" | "neutral" | string
@@ -24,7 +24,7 @@ export default function ChatMessage(props: ChatMessageProps) {
 	)
 }
 
-function UserChatMessage({body, sender, id}: ChatMessageProps) {
+function UserChatMessage({message, sender, id}: ChatMessageProps) {
 	return (
 		<>
 			<div
@@ -34,13 +34,13 @@ function UserChatMessage({body, sender, id}: ChatMessageProps) {
 				{ sender }
 			</div>
 			<div>
-				{ body }
+				{ message }
 			</div>
 		</>
 	)
 }
 
-function SystemChatMessage({body , metadata}: ChatMessageProps) {
+function SystemChatMessage({message , metadata}: ChatMessageProps) {
 	return (
 		<>
 			<div
@@ -56,7 +56,7 @@ function SystemChatMessage({body , metadata}: ChatMessageProps) {
 				SYSTEM
 			</div>
 			<div>
-				{ body }
+				{ message }
 			</div>
 		</>
 	)

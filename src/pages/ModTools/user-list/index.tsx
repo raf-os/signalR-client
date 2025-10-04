@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { requestServerAction } from "../(auth)/actionWrapper";
 
 import PageLayout from "../components/PageLayout";
-import { UserListContext, type TUserListContext } from "./UserListContext";
+import { UserListContext, type TUserListContext, type EditRequestPayload } from "./UserListContext";
 
 import {
     Table,
@@ -34,11 +34,6 @@ import { Button } from "@/components/ui/button";
 import { X as XIcon, ChevronDownIcon } from "lucide-react";
 import { DashboardContext } from "../DashboardContext";
 
-type EditRequestPayload = {
-    userId: number,
-    userName: string,
-    userAuth: number,
-}
 
 export default function UserListPage() {
     const { success: isValid } = useLoaderData();
@@ -48,23 +43,24 @@ export default function UserListPage() {
             mainContent={<UserListContent />}
         />
     ) : (
-        <>Nope</>
+        <>Not authorized.</>
     )
 }
 
 function UserListContent() {
-    const { userList } = useLoaderData<TLoader>();
+    const { userList: _userList } = useLoaderData<TLoader>();
+    const [ userList, setUserList ] = useState(_userList);
     const [ isEditorOpen, setIsEditorOpen ] = useState<boolean>(false);
     const [ userEditData, setUserEditData ] = useState<TUserInfo | undefined>(undefined);
     const [ isEditRequestPending, startEditRequestTransition ] = useTransition();
 
-    const onEditorWindowOpen = (props: TUserInfo) => {
+    const onEditorWindowOpen: TUserListContext['openEditWindow'] = (props) => {
         if (isEditorOpen) return;
         setIsEditorOpen(true);
         setUserEditData(props);
     }
 
-    const onEditRequestSubmit = (payload: EditRequestPayload) => {
+    const onEditRequestSubmit: TUserListContext['submitUserEdit'] = (payload, callback) => {
         if (isEditRequestPending) return;
 
         const _payload: EditRequestPayload = {
@@ -77,15 +73,24 @@ function UserListContent() {
             const result = await requestServerAction("updateUserData", _payload);
 
             if (result.success) {
+                const request = await requestServerAction<TUserInfo[]>("fetchUserDb");
+
                 startTransition(() => {
+                    if (request.success) {
+                        setUserList(request.content);
+                    }
                     setIsEditorOpen(false);
                 });
+            } else if (callback) {
+                callback({ success: false, message: result.message });
             }
         });
     }
 
     const ctx: TUserListContext = {
-        openEditWindow: onEditorWindowOpen
+        openEditWindow: onEditorWindowOpen,
+        submitUserEdit: onEditRequestSubmit,
+        isEditPending: isEditRequestPending
     }
 
     return (
@@ -152,6 +157,8 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
 
     const { authState } = useContext(DashboardContext);
     const isHigherAuthority = authState >= editData.auth;
+    
+    const { submitUserEdit, isEditPending } = useContext(UserListContext);
 
     const FormItem = ({children, label, ...rest}: React.ComponentPropsWithRef<'div'> & { label?: string }) => {
         return (
@@ -168,6 +175,12 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
         const userAuth = formData.get("userAuth");
 
         if (!userId || !userName || !userAuth) return;
+
+        submitUserEdit({
+            userId: Number(userId),
+            userName: String(userName),
+            userAuth: Number(userAuth)
+        });
     }
 
     return (
@@ -218,7 +231,7 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
                             </FormItem>
 
                             <FormItem label="Auth level">
-                                <Select defaultValue={String(authValue)} name="userAuth" disabled={!isHigherAuthority}>
+                                <Select defaultValue={String(editData.auth)} name="userAuth" disabled={!isHigherAuthority}>
                                     <SelectTrigger
                                         className="w-full"
                                         iconRender={(
@@ -231,10 +244,11 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
                                         { authMap.map((a, idx) => (
                                             <SelectItem
                                                 key={`authFormLevel::[${idx}]`}
-                                                value={String(a)}
+                                                value={String(idx)}
+                                                
                                                 className="focus:bg-orange-400 focus:text-orange-950"
                                             >
-                                                {authMap[idx]}
+                                                {a}
                                             </SelectItem>
                                         )) }
                                     </SelectContent>
@@ -245,6 +259,7 @@ function UserEditWindow({isOpen, setIsOpen, editData}: UserEditWindowProps) {
                         <div className="mt-auto flex flex-col gap-2 p-4">
                             <Button
                                 type="submit"
+                                disabled={isEditPending}
                             >
                                 Save
                             </Button>

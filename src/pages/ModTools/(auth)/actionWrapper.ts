@@ -39,7 +39,10 @@ export async function requestServerAction<T = Record<string, string>>(
             }
         }
 
-        const responseBody = await response.json();
+        let responseBody: any = null;
+        if (response.headers.get("content-length") !== "0") {
+            responseBody = await response.json();
+        }
 
         return {
             success: true,
